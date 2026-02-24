@@ -1,35 +1,20 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useRef, useState } from "react";
 
 type AiResult = {
   fit_level: "Strong" | "Medium" | "Low";
-  suitable: boolean;
-  confidence: "High" | "Medium" | "Low";
-  summary: string;
-  matched_required_skills: string[];
-  missing_required_skills: string[];
-  matched_nice_to_have: string[];
-  missing_nice_to_have: string[];
-  risk_flags: string[];
-  evidence: { claim: string; snippet: string }[];
-  screening_recommendation:
-    | "Proceed to technical interview"
-    | "Recruiter screen only"
-    | "Reject";
-  interview_focus_areas: string[];
   final_verdict: string;
-  final_why: string[];
 };
 
 export default function Home() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<AiResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001";
@@ -39,42 +24,12 @@ export default function Home() {
     file !== null &&
     !loading;
 
-  const analyze = async () => {
-    if (!canAnalyze) return;
-
-    setError(null);
-    setResult(null);
-
-    const formData = new FormData();
-    formData.append("position_title", title.trim());
-    formData.append("position_description", description);
-    formData.append("cv_pdf", file as File);
-
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/analyze`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Request failed");
-      }
-
-      const data = await res.json();
-      setResult(data);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFile = (f: File | null) => {
     if (!f) {
       setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -88,6 +43,35 @@ export default function Home() {
 
     setError(null);
     setFile(f);
+  };
+
+  const analyze = async () => {
+    if (!canAnalyze) return;
+
+    setError(null);
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append("position_title", title.trim());
+    formData.append("position_description", description);
+    formData.append("cv_pdf", file as File);
+
+    try {
+      const res = await fetch(`${API_BASE}/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Analyze request failed");
+      }
+
+      await res.json();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -173,6 +157,7 @@ export default function Home() {
             </label>
 
             <input
+              ref={fileInputRef}
               id="cv-upload"
               type="file"
               accept="application/pdf"
@@ -183,32 +168,17 @@ export default function Home() {
             />
 
             <div
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setDragOver(false);
-              }}
+              onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                setDragOver(false);
                 handleFile(e.dataTransfer.files?.[0] ?? null);
               }}
               style={{
                 marginTop: 8,
                 borderRadius: 12,
-                border: dragOver
-                  ? "2px dashed #111"
-                  : "2px dashed #cbd5e1",
-                background: dragOver ? "#eef2ff" : "#ffffff",
+                border: "2px dashed #cbd5e1",
+                background: "#ffffff",
                 padding: 20,
-                transition: "all 0.15s ease",
               }}
             >
               <div
@@ -220,20 +190,10 @@ export default function Home() {
                 }}
               >
                 <div>
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      color: "#111",
-                    }}
-                  >
+                  <div style={{ fontWeight: 800, color: "#111" }}>
                     Drag & drop PDF here
                   </div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      color: "#6b7280",
-                    }}
-                  >
+                  <div style={{ fontSize: 14, color: "#6b7280" }}>
                     or choose file
                   </div>
                 </div>
@@ -288,53 +248,45 @@ export default function Home() {
           </div>
 
           {/* Analyze */}
-          <div>
-            <button
-              onClick={analyze}
-              disabled={!canAnalyze}
+          <button
+            onClick={analyze}
+            disabled={!canAnalyze}
+            style={{
+              padding: "12px 20px",
+              borderRadius: 10,
+              border: "none",
+              fontWeight: 800,
+              background: canAnalyze ? "#111" : "#d1d5db",
+              color: canAnalyze ? "#fff" : "#6b7280",
+              cursor: canAnalyze ? "pointer" : "not-allowed",
+            }}
+          >
+            {loading ? "Analyzing..." : "Analyze"}
+          </button>
+
+          {!title && (
+            <div
               style={{
-                padding: "12px 20px",
-                borderRadius: 10,
-                border: "none",
-                fontWeight: 800,
-                background: canAnalyze
-                  ? "#111"
-                  : "#d1d5db",
-                color: canAnalyze
-                  ? "#fff"
-                  : "#6b7280",
-                cursor: canAnalyze
-                  ? "pointer"
-                  : "not-allowed",
+                marginTop: 8,
+                fontSize: 13,
+                color: "#6b7280",
               }}
             >
-              {loading ? "Analyzing..." : "Analyze"}
-            </button>
+              Enter position title to enable analysis
+            </div>
+          )}
 
-            {!title && (
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: "#6b7280",
-                }}
-              >
-                Enter position title to enable analysis
-              </div>
-            )}
-
-            {title && !file && (
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: "#6b7280",
-                }}
-              >
-                Upload a PDF CV to continue
-              </div>
-            )}
-          </div>
+          {title && !file && (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: "#6b7280",
+              }}
+            >
+              Upload a PDF CV to continue
+            </div>
+          )}
 
           {error && (
             <div
