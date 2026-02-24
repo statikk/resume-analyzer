@@ -20,13 +20,23 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Resume Analyzer API")
 
-# CORS for local dev (frontend on :3000)
+# -------------------------
+# CORS
+# -------------------------
+# Prod: set FRONTEND_ORIGIN in Render (e.g., https://resume-analyzer-pi-ten.vercel.app)
+# Dev: still allow localhost:3000
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "").strip()
+
+allow_origins: List[str] = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if FRONTEND_ORIGIN:
+    allow_origins.insert(0, FRONTEND_ORIGIN)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +59,7 @@ def extract_text_from_pdf(file_obj) -> str:
             parts.append("")
     return "\n".join(parts)
 
+
 def try_parse_json(s: str) -> Optional[Dict[str, Any]]:
     try:
         obj = json.loads(s)
@@ -56,8 +67,10 @@ def try_parse_json(s: str) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
+
 def ensure_list_of_str(value: Any) -> bool:
     return isinstance(value, list) and all(isinstance(x, str) for x in value)
+
 
 def validate_result(obj: Dict[str, Any]) -> None:
     required_keys = [
@@ -119,6 +132,7 @@ def validate_result(obj: Dict[str, Any]) -> None:
         if not isinstance(e["claim"], str) or not isinstance(e["snippet"], str):
             raise ValueError("evidence claim/snippet must be strings")
 
+
 # -------------------------
 # Prompting
 # -------------------------
@@ -126,23 +140,15 @@ SCHEMA_HINT = {
     "fit_level": "Strong|Medium|Low",
     "suitable": True,
     "confidence": "High|Medium|Low",
-
     "summary": "",
-
     "matched_required_skills": [],
     "missing_required_skills": [],
-
     "matched_nice_to_have": [],
     "missing_nice_to_have": [],
-
     "risk_flags": [],
-
     "evidence": [{"claim": "", "snippet": ""}],
-
     "screening_recommendation": "Proceed to technical interview | Recruiter screen only | Reject",
-
     "interview_focus_areas": [],
-
     "final_verdict": "",
     "final_why": [],
 }
@@ -155,6 +161,7 @@ You must:
 - Do NOT invent facts or experience.
 - Be concise and useful for recruiter decisions.
 """
+
 
 def build_user_prompt(position_title: str, position_description: str, resume_text: str) -> str:
     desc = (position_description or "").strip()
@@ -203,6 +210,7 @@ Output constraints:
 All output in English.
 """
 
+
 # -------------------------
 # Routes
 # -------------------------
@@ -210,11 +218,12 @@ All output in English.
 def health():
     return {"ok": True, "model": OPENAI_MODEL}
 
+
 @app.post("/analyze")
 async def analyze(
     position_title: str = Form(...),
     position_description: str = Form(""),
-    cv_pdf: UploadFile = File(...)
+    cv_pdf: UploadFile = File(...),
 ):
     title = (position_title or "").strip()
     if len(title) < 3:
@@ -278,11 +287,13 @@ Previous output:
         raise HTTPException(status_code=500, detail=f"ANALYSIS_FAILED: schema validation error: {e}")
 
     # Minimal log (no CV stored)
-    print({
-        "title": title,
-        "fit": parsed.get("fit_level"),
-        "suitable": parsed.get("suitable"),
-        "rec": parsed.get("screening_recommendation"),
-    })
+    print(
+        {
+            "title": title,
+            "fit": parsed.get("fit_level"),
+            "suitable": parsed.get("suitable"),
+            "rec": parsed.get("screening_recommendation"),
+        }
+    )
 
     return parsed
