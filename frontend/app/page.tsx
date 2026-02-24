@@ -132,6 +132,11 @@ export default function Home() {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001";
 
+  const canAnalyze =
+    title.trim().length > 0 &&
+    file !== null &&
+    !loading;
+
   const fitTone = useMemo(() => {
     if (!result) return "neutral" as const;
     if (result.fit_level === "Strong") return "good" as const;
@@ -156,15 +161,12 @@ export default function Home() {
     setError(null);
     setResult(null);
 
-    if (!title.trim() || !file) {
-      setError("Position title and PDF required");
-      return;
-    }
+    if (!canAnalyze) return;
 
     const formData = new FormData();
     formData.append("position_title", title.trim());
     formData.append("position_description", description);
-    formData.append("cv_pdf", file);
+    formData.append("cv_pdf", file as File);
 
     setLoading(true);
 
@@ -207,16 +209,13 @@ export default function Home() {
             border: "1px solid #eef2ff",
           }}
         >
-          <h1 style={{ color: "#111", fontWeight: 900, fontSize: 28, margin: 0 }}>
+          <h1 style={{ color: "#111", fontWeight: 900, fontSize: 28 }}>
             Resume Match Analyzer
           </h1>
-          <p style={{ color: "#374151", marginTop: 10, marginBottom: 22 }}>
-            One-page AI pre-screening tool for recruiters (PDF only).
-          </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+          <div style={{ display: "grid", gap: 14 }}>
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>
+              <label style={{ fontWeight: 800, color: "#111" }}>
                 Position title *
               </label>
               <input
@@ -229,20 +228,17 @@ export default function Home() {
                   marginTop: 6,
                   borderRadius: 10,
                   border: "1px solid #d1d5db",
-                  background: "#fff",
-                  color: "#111",
                 }}
               />
             </div>
 
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>
+              <label style={{ fontWeight: 800, color: "#111" }}>
                 Position description
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional job description / requirements"
                 style={{
                   width: "100%",
                   padding: 12,
@@ -250,15 +246,13 @@ export default function Home() {
                   borderRadius: 10,
                   border: "1px solid #d1d5db",
                   minHeight: 110,
-                  background: "#fff",
-                  color: "#111",
                 }}
               />
             </div>
 
-            {/* Upload (Drag & Drop + Button) */}
+            {/* Upload */}
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>
+              <label style={{ fontWeight: 800, color: "#111" }}>
                 Upload CV (PDF)
               </label>
 
@@ -273,22 +267,18 @@ export default function Home() {
               <div
                 onDragEnter={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   setDragOver(true);
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   setDragOver(true);
                 }}
                 onDragLeave={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   setDragOver(false);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   setDragOver(false);
                   const dropped = e.dataTransfer.files?.[0] ?? null;
                   onPickFile(dropped);
@@ -301,55 +291,23 @@ export default function Home() {
                   padding: 16,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 10,
-                        background: "#111",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 900,
-                      }}
-                      aria-hidden
-                    >
-                      PDF
-                    </div>
-
-                    <div>
-                      <div style={{ fontWeight: 900, color: "#111" }}>
-                        Drag & drop a PDF here
-                      </div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>
-                        or choose a file from your computer
-                      </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <strong>Drag & drop PDF here</strong>
+                    <div style={{ fontSize: 13, color: "#6b7280" }}>
+                      or choose file
                     </div>
                   </div>
 
                   <label
                     htmlFor="cv-upload"
                     style={{
-                      display: "inline-block",
                       padding: "10px 14px",
+                      borderRadius: 10,
                       background: "#fff",
                       border: "1px solid #d1d5db",
-                      borderRadius: 10,
                       cursor: "pointer",
-                      fontWeight: 900,
-                      color: "#111",
-                      boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+                      fontWeight: 800,
                     }}
                   >
                     Choose file
@@ -357,37 +315,11 @@ export default function Home() {
                 </div>
 
                 {file && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      background: "#ffffff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                    }}
-                  >
-                    <span style={{ color: "#111", fontWeight: 800 }}>
-                      Selected:
-                    </span>
-                    <span style={{ color: "#111" }}>{file.name}</span>
-
+                  <div style={{ marginTop: 10 }}>
+                    Selected: <strong>{file.name}</strong>
                     <button
-                      type="button"
                       onClick={() => onPickFile(null)}
-                      style={{
-                        marginLeft: "auto",
-                        background: "#f3f4f6",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 10,
-                        padding: "6px 10px",
-                        cursor: "pointer",
-                        fontWeight: 900,
-                        color: "#111",
-                      }}
-                      title="Remove selected file"
+                      style={{ marginLeft: 10 }}
                     >
                       ✕
                     </button>
@@ -396,135 +328,48 @@ export default function Home() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {/* Analyze */}
+            <div>
               <button
                 onClick={analyze}
-                disabled={loading}
+                disabled={!canAnalyze}
                 style={{
                   padding: "12px 16px",
                   borderRadius: 10,
-                  background: loading ? "#374151" : "#111",
+                  background: !canAnalyze ? "#9ca3af" : "#111",
                   color: "#fff",
                   border: "none",
                   fontWeight: 900,
-                  cursor: loading ? "not-allowed" : "pointer",
+                  cursor: !canAnalyze ? "not-allowed" : "pointer",
+                  opacity: !canAnalyze ? 0.7 : 1,
                 }}
               >
                 {loading ? "Analyzing..." : "Analyze"}
               </button>
 
-              {error && (
-                <span style={{ color: "#b91c1c", fontWeight: 800 }}>
-                  {error}
-                </span>
+              {!title && (
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                  Enter position title to enable analysis
+                </div>
+              )}
+
+              {title && !file && (
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                  Upload a PDF CV to continue
+                </div>
               )}
             </div>
           </div>
         </div>
 
+        {/* RESULT */}
         {result && (
-          <div style={{ marginTop: 18, display: "grid", gap: 14 }}>
+          <div style={{ marginTop: 18 }}>
             <Card
               title="Verdict"
               right={<Badge label={`Fit: ${result.fit_level}`} tone={fitTone} />}
             >
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                <Badge label={`Suitable: ${result.suitable ? "Yes" : "No"}`} tone={result.suitable ? "good" : "bad"} />
-                <Badge label={`Confidence: ${result.confidence}`} tone="neutral" />
-                <Badge label={`Recommendation: ${result.screening_recommendation}`} tone="neutral" />
-              </div>
-
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontWeight: 900, marginBottom: 4 }}>Final verdict</div>
-                <div style={{ color: "#111" }}>{result.final_verdict}</div>
-              </div>
-
-              {result.final_why?.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 900, marginBottom: 4 }}>Why</div>
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {result.final_why.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div>
-                <div style={{ fontWeight: 900, marginBottom: 4 }}>Summary</div>
-                <div style={{ color: "#111" }}>{result.summary}</div>
-              </div>
-            </Card>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <Card title="Matched Required">
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {result.matched_required_skills.map((m, i) => (
-                    <li key={i}>{m}</li>
-                  ))}
-                </ul>
-
-                {result.matched_nice_to_have?.length > 0 && (
-                  <>
-                    <div style={{ height: 10 }} />
-                    <div style={{ fontWeight: 900, marginBottom: 6 }}>Matched Nice-to-have</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {result.matched_nice_to_have.map((m, i) => (
-                        <li key={i}>{m}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </Card>
-
-              <Card title="Missing Required">
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {result.missing_required_skills.map((m, i) => (
-                    <li key={i}>{m}</li>
-                  ))}
-                </ul>
-
-                {result.missing_nice_to_have?.length > 0 && (
-                  <>
-                    <div style={{ height: 10 }} />
-                    <div style={{ fontWeight: 900, marginBottom: 6 }}>Missing Nice-to-have</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {result.missing_nice_to_have.map((m, i) => (
-                        <li key={i}>{m}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </Card>
-            </div>
-
-            {result.risk_flags?.length > 0 && (
-              <Card title="Risk flags">
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {result.risk_flags.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            <Card title="Evidence">
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {result.evidence.map((e, i) => (
-                  <li key={i} style={{ marginBottom: 10 }}>
-                    <div style={{ fontWeight: 900 }}>{e.claim}</div>
-                    <div style={{ color: "#374151" }}>&ldquo;{e.snippet}&rdquo;</div>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card title="Interview focus areas">
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {result.interview_focus_areas.map((q, i) => (
-                  <li key={i}>{q}</li>
-                ))}
-              </ul>
+              <p>{result.final_verdict}</p>
             </Card>
           </div>
         )}
