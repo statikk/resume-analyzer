@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 type AiResult = {
   fit_level: "Strong" | "Medium" | "Low";
@@ -23,7 +23,6 @@ type AiResult = {
 
   interview_focus_areas: string[];
 
-  // NEW:
   final_verdict: string;
   final_why: string[];
 };
@@ -128,7 +127,10 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001";
+  const [dragOver, setDragOver] = useState<boolean>(false);
+
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8001";
 
   const fitTone = useMemo(() => {
     if (!result) return "neutral" as const;
@@ -136,6 +138,19 @@ export default function Home() {
     if (result.fit_level === "Medium") return "warn" as const;
     return "bad" as const;
   }, [result]);
+
+  const onPickFile = (f: File | null) => {
+    setError(null);
+    if (!f) {
+      setFile(null);
+      return;
+    }
+    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
+      setError("Please select a PDF file.");
+      return;
+    }
+    setFile(f);
+  };
 
   const analyze = async (): Promise<void> => {
     setError(null);
@@ -201,7 +216,9 @@ export default function Home() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>Position title *</label>
+              <label style={{ color: "#111", fontWeight: 800 }}>
+                Position title *
+              </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -219,7 +236,9 @@ export default function Home() {
             </div>
 
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>Position description</label>
+              <label style={{ color: "#111", fontWeight: 800 }}>
+                Position description
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -237,26 +256,142 @@ export default function Home() {
               />
             </div>
 
+            {/* Upload (Drag & Drop + Button) */}
             <div>
-              <label style={{ color: "#111", fontWeight: 800 }}>Upload CV (PDF)</label>
+              <label style={{ color: "#111", fontWeight: 800 }}>
+                Upload CV (PDF)
+              </label>
+
+              <input
+                id="cv-upload"
+                type="file"
+                accept="application/pdf"
+                style={{ display: "none" }}
+                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+              />
+
               <div
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOver(false);
+                  const dropped = e.dataTransfer.files?.[0] ?? null;
+                  onPickFile(dropped);
+                }}
                 style={{
                   marginTop: 8,
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "center",
-                  flexWrap: "wrap",
+                  borderRadius: 12,
+                  border: dragOver ? "2px dashed #111" : "1px dashed #cbd5e1",
+                  background: dragOver ? "#eef2ff" : "#f9fafb",
+                  padding: 16,
                 }}
               >
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: "#111",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 900,
+                      }}
+                      aria-hidden
+                    >
+                      PDF
+                    </div>
+
+                    <div>
+                      <div style={{ fontWeight: 900, color: "#111" }}>
+                        Drag & drop a PDF here
+                      </div>
+                      <div style={{ color: "#6b7280", fontSize: 13 }}>
+                        or choose a file from your computer
+                      </div>
+                    </div>
+                  </div>
+
+                  <label
+                    htmlFor="cv-upload"
+                    style={{
+                      display: "inline-block",
+                      padding: "10px 14px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      color: "#111",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    Choose file
+                  </label>
+                </div>
+
                 {file && (
-                  <span style={{ color: "#374151", fontSize: 13 }}>
-                    Selected: <b style={{ color: "#111" }}>{file.name}</b>
-                  </span>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <span style={{ color: "#111", fontWeight: 800 }}>
+                      Selected:
+                    </span>
+                    <span style={{ color: "#111" }}>{file.name}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => onPickFile(null)}
+                      style={{
+                        marginLeft: "auto",
+                        background: "#f3f4f6",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        fontWeight: 900,
+                        color: "#111",
+                      }}
+                      title="Remove selected file"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -271,7 +406,7 @@ export default function Home() {
                   background: loading ? "#374151" : "#111",
                   color: "#fff",
                   border: "none",
-                  fontWeight: 800,
+                  fontWeight: 900,
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
@@ -279,7 +414,7 @@ export default function Home() {
               </button>
 
               {error && (
-                <span style={{ color: "#b91c1c", fontWeight: 700 }}>
+                <span style={{ color: "#b91c1c", fontWeight: 800 }}>
                   {error}
                 </span>
               )}
